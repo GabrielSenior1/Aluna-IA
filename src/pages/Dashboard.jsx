@@ -70,12 +70,12 @@ const simulationScenarios = [
 export default function Dashboard() {
   const navigate = useNavigate();
 
-  // Estados del medidor
-  const [isMeterOn, setIsMeterOn] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState('disconnected'); // disconnected -> connecting -> connected
-  const [currentPH, setCurrentPH] = useState(7.0);
-  const [currentCond, setCurrentCond] = useState(200);
-  const [currentTemp, setCurrentTemp] = useState(25.0);
+  // Estados del medidor (Inicia encendido y conectándose al prototipo por defecto)
+  const [isMeterOn, setIsMeterOn] = useState(true);
+  const [connectionStatus, setConnectionStatus] = useState('connecting'); // disconnected -> connecting -> connected
+  const [currentPH, setCurrentPH] = useState(7.35);
+  const [currentCond, setCurrentCond] = useState(210);
+  const [currentTemp, setCurrentTemp] = useState(27.8);
 
   // Estados de datos e historial
   const [readings, setReadings] = useState([]);

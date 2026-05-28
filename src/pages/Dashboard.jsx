@@ -142,13 +142,13 @@ export default function Dashboard() {
             <span className="material-symbols-outlined text-white text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>water_drop</span>
           </div>
           <span className="text-headline-md font-headline-md font-bold text-primary">Aluna IA</span>
-          <span className="hidden sm:inline-block bg-primary/10 text-primary text-[11px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Gaira Conectada</span>
+          <span className="hidden sm:inline-block bg-primary/10 text-primary text-[11px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Ciénaga Conectada</span>
         </div>
         
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-8">
           <Link to="/dashboard" className="text-primary font-bold hover:bg-surface-container-high/40 transition-colors px-3 py-2 rounded-lg duration-150 flex items-center gap-2">
-            <span className="material-symbols-outlined text-[20px]">waves</span> Estación Gaira
+            <span className="material-symbols-outlined text-[20px]">waves</span> Estación Ciénaga
           </Link>
           <Link to="/chat" className="text-on-surface-variant hover:text-primary transition-colors px-3 py-2 rounded-lg duration-150 flex items-center gap-2">
             <span className="material-symbols-outlined text-[20px]">assistant</span> Aluna Chat
@@ -174,7 +174,7 @@ export default function Dashboard() {
         {/* Sección de Encabezado */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
           <div>
-            <h2 className="text-display-lg text-on-surface mb-1">Río Gaira</h2>
+            <h2 className="text-display-lg text-on-surface mb-1">Río Ciénaga</h2>
             <p className="text-body-lg text-on-surface-variant">Estación Principal • Sector Desembocadura</p>
           </div>
           
@@ -260,7 +260,7 @@ export default function Dashboard() {
                   </div>
                   <h4 className="text-headline-md text-primary font-bold mb-1">Buscando Hardware</h4>
                   <p className="text-body-sm text-on-surface-variant max-w-xs">
-                    Estableciendo conexión bluetooth de baja energía con el medidor sumergible en el Río Gaira...
+                    Estableciendo conexión bluetooth de baja energía con el medidor sumergible en el Río Ciénaga...
                   </p>
                 </div>
               ) : (

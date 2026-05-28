@@ -11,12 +11,22 @@ export default function Chat() {
     {
       id: "welc-01",
       sender: 'ai',
-      text: '¡Hola, compañero pescador! Soy Aluna IA, tu asistente virtual para la cuenca del Río Gaira. Estoy conectada en tiempo real a los sensores. Pregúntame sobre el estado del agua, la marea o recomendaciones para tus redes hoy.'
+      text: '¡Hola, compañero pescador! Soy Aluna IA, tu asistente virtual para la cuenca del Río Ciénaga. Estoy conectada en tiempo real a los sensores. Pregúntame sobre el estado del agua, la marea o recomendaciones para tus redes hoy.'
     }
   ]);
   const [input, setInput] = useState('');
   const [activeReading, setActiveReading] = useState(null);
   const [isAiTyping, setIsAiTyping] = useState(false);
+
+  // Función para procesar y renderizar negritas con ** (evita el texto plano con asteriscos)
+  const renderMessageText = (text) => {
+    if (!text) return '';
+    const parts = text.split('**');
+    return parts.map((part, index) => {
+      // Los índices impares son los textos que estaban dentro de **
+      return index % 2 === 1 ? <strong key={index} className="font-extrabold">{part}</strong> : part;
+    });
+  };
 
   // Auto-scroll al final del chat al recibir mensajes
   useEffect(() => {
@@ -30,7 +40,7 @@ export default function Chat() {
       setActiveReading(reading);
       
       // Inyectar el mensaje del usuario con los datos de hardware
-      const userMessageText = `Compañero Aluna, he tomado una lectura directa de los sensores en el Río Gaira:\n• pH: ${reading.ph}\n• Conductividad: ${reading.conductivity} µS/cm\n• Temperatura: ${reading.temperature}°C\n\n¿Me podrías dar un análisis de estos parámetros y tus mejores recomendaciones para tirar la atarraya hoy?`;
+      const userMessageText = `Compañero Aluna, he tomado una lectura directa de los sensores en el Río Ciénaga:\n• pH: ${reading.ph}\n• Conductividad: ${reading.conductivity} µS/cm\n• Temperatura: ${reading.temperature}°C\n\n¿Me podrías dar un análisis de estos parámetros y tus mejores recomendaciones para tirar la atarraya hoy?`;
       
       const userMsgId = "injected-user-" + Date.now();
       const newMessages = [
@@ -54,7 +64,7 @@ export default function Chat() {
         if (reading.ph >= 7.0 && reading.ph <= 7.8) {
           phComment = `El pH de **${reading.ph}** está en un rango neutro-ligeramente alcalino perfecto. Esto significa que el agua tiene una salud biológica excelente en este sector, sin presencia de vertimientos ácidos ni contaminantes industriales.`;
         } else if (reading.ph < 7.0) {
-          phComment = `El pH de **${reading.ph}** está un poco bajo (ácido). Si ha llovido en la parte alta de la Sierra Nevada, podría ser por escorrentía orgánica natural, pero mantente atento si baja de 6.5.`;
+          phComment = `El pH de **${reading.ph}** está un poco bajo (ácido). Si ha llovido en la parte alta de la cuenca, podría ser por escorrentía orgánica natural, pero mantente atento si baja de 6.5.`;
         } else {
           phComment = `El pH de **${reading.ph}** es alcalino. Monitorea si sube de 8.5, ya que niveles muy altos dificultan la respiración de peces jóvenes.`;
         }
@@ -77,7 +87,7 @@ export default function Chat() {
           tempComment = `El agua está muy cálida (**${reading.temperature}°C**). Los niveles de oxígeno disuelto podrían disminuir un poco; los peces buscarán corrientes rápidas o áreas con sombra vegetal.`;
         }
 
-        const aiResponse = `¡Recibido, compañero! Excelente lectura tomada en la estación del Río Gaira. Aquí tienes mi análisis técnico y recomendaciones de pesca basadas en estos datos:
+        const aiResponse = `¡Recibido, compañero! Excelente lectura tomada en la estación del Río Ciénaga. Aquí tienes mi análisis técnico y recomendaciones de pesca basadas en estos datos:
 
 1. 🧪 **Análisis Químico (pH - ${reading.ph}):** ${phComment}
 
@@ -125,12 +135,12 @@ export default function Chat() {
         if (lowerInput.includes('hola') || lowerInput.includes('buenos días') || lowerInput.includes('buenas') || lowerInput.includes('saludos')) {
           reply = "¡Hola! Qué gusto saludarte, compañero del río. Soy Aluna IA. ¿Qué tal va la jornada de pesca hoy? ¿Quieres que analicemos algún dato?";
         } else if (lowerInput.includes('pesca') || lowerInput.includes('redes') || lowerInput.includes('peces') || lowerInput.includes('lisa')) {
-          reply = "Para la pesca de la Lisa en el Río Gaira, el pH óptimo es entre 7.2 y 7.6. Si los sensores muestran agua dulce limpia, tira tus redes cerca de las raíces de los manglares en la marea bajante.";
+          reply = "Para la pesca de la Lisa en el Río Ciénaga, el pH óptimo es entre 7.2 y 7.6. Si los sensores muestran agua dulce limpia, tira tus redes cerca de las raíces de los manglares en la marea bajante.";
         } else if (lowerInput.includes('temperatura') || lowerInput.includes('calor')) {
           if (activeReading) {
             reply = `Actualmente tenemos una temperatura activa en memoria de **${activeReading.temperature}°C** tomada por tu medidor. Está en un rango excelente. Recuerda que a mayor calor, el oxígeno disminuye, así que busca áreas con corriente en movimiento.`;
           } else {
-            reply = "El Río Gaira suele mantenerse entre 26°C y 29°C. Te sugiero conectar el medidor en el Dashboard y registrar una lectura para darte un reporte preciso.";
+            reply = "El Río Ciénaga suele mantenerse entre 26°C y 29°C. Te sugiero conectar el medidor en el Dashboard y registrar una lectura para darte un reporte preciso.";
           }
         } else if (lowerInput.includes('ph') || lowerInput.includes('ácido')) {
           if (activeReading) {
@@ -172,7 +182,7 @@ export default function Chat() {
         {/* Navigation */}
         <nav className="hidden md:flex items-center gap-8">
           <Link to="/dashboard" className="text-on-surface-variant hover:text-primary transition-colors px-3 py-2 rounded-lg duration-150 flex items-center gap-2">
-            <span className="material-symbols-outlined text-[20px]">waves</span> Estación Gaira
+            <span className="material-symbols-outlined text-[20px]">waves</span> Estación Ciénaga
           </Link>
           <Link to="/chat" className="text-primary font-bold hover:bg-surface-container-high/40 transition-colors px-3 py-2 rounded-lg duration-150 flex items-center gap-2">
             <span className="material-symbols-outlined text-[20px]">assistant</span> Aluna Chat
@@ -197,7 +207,7 @@ export default function Chat() {
           <h2 className="text-headline-md font-bold text-on-surface mb-4">Contexto de IA</h2>
           
           <p className="text-body-sm text-on-surface-variant mb-6">
-            Aluna analiza los datos activos del medidor para entregarte sugerencias precisas en el Río Gaira.
+            Aluna analiza los datos activos del medidor para entregarte sugerencias precisas en el Río Ciénaga.
           </p>
 
           {activeReading ? (
@@ -296,7 +306,7 @@ export default function Chat() {
                     ? 'bg-primary text-on-primary border-primary-container rounded-tr-sm' 
                     : 'bg-surface-container-lowest text-on-surface border-outline-variant/15 rounded-tl-sm'
                 }`}>
-                  {msg.text}
+                  {renderMessageText(msg.text)}
                 </div>
 
               </div>

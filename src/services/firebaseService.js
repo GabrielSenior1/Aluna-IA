@@ -43,7 +43,7 @@ const DEFAULT_READINGS = [
     conductivity: 195,
     temperature: 26.8,
     status: "Óptimo",
-    location: "Estación Río Gaira - Desembocadura"
+    location: "Estación Río Ciénaga - Desembocadura"
   },
   {
     id: "hist-02",
@@ -52,7 +52,7 @@ const DEFAULT_READINGS = [
     conductivity: 220,
     temperature: 27.2,
     status: "Óptimo",
-    location: "Estación Río Gaira - Desembocadura"
+    location: "Estación Río Ciénaga - Desembocadura"
   },
   {
     id: "hist-03",
@@ -61,7 +61,7 @@ const DEFAULT_READINGS = [
     conductivity: 215,
     temperature: 28.1,
     status: "Óptimo",
-    location: "Estación Río Gaira - Desembocadura"
+    location: "Estación Río Ciénaga - Desembocadura"
   }
 ];
 
@@ -77,7 +77,7 @@ export const firebaseService = {
       conductivity: parseInt(reading.conductivity),
       temperature: parseFloat(reading.temperature.toFixed(1)),
       timestamp: new Date().toISOString(),
-      location: "Estación Río Gaira - Desembocadura",
+      location: "Estación Río Ciénaga - Desembocadura",
       status: (reading.ph >= 6.5 && reading.ph <= 8.5) ? "Óptimo" : "Alerta"
     };
 

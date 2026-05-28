@@ -2,6 +2,71 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { firebaseService } from '../services/firebaseService';
 
+// Configuración de Estados del Río Ciénaga (Bueno, Malo, Normal)
+const statusConfig = {
+  "Óptimo": {
+    bg: "bg-[#e6f4ea] text-[#137333] border-[#c3e6cb] dark:bg-[#137333]/25 dark:text-[#a3e6b5]",
+    icon: "check_circle",
+    title: "Ciénaga Saludable e Ideal",
+    desc: "El pH equilibrado y la baja conductividad descartan contaminación. La temperatura templada acelerará el metabolismo de especies como la Lisa y el Róbalo, haciéndolas muy receptivas a las redes.",
+    bannerBg: "from-success/20 to-secondary/15 bg-gradient-to-br border-success/30",
+    bannerBadgeBg: "bg-[#e6f4ea] text-[#137333] dark:bg-[#137333]/40 dark:text-[#a3e6b5]",
+    bannerBadgeText: "ESTADO ÓPTIMO",
+    bannerTitle: "Condición del Agua: Óptima para Pesca",
+    bannerDesc: "Las condiciones actuales son excelentes para la actividad pesquera artesanal. Agua limpia y sana.",
+    bannerIcon: "waves"
+  },
+  "Crítico": {
+    bg: "bg-error-container/45 text-error border-error-container/30 dark:bg-error/20 dark:text-error-container",
+    icon: "warning",
+    title: "Alerta por Contaminación/Estrés",
+    desc: "pH fuertemente ácido detectado en la Ciénaga. La altísima conductividad sugiere escorrentías agrícolas con pesticidas o vertimientos químicos nocivos. La temperatura superior a 32°C disminuye drásticamente el oxígeno disuelto. Peligro de asfixia en cardúmenes. No se recomienda la pesca.",
+    bannerBg: "from-error/15 to-transparent bg-gradient-to-b border-error/35",
+    bannerBadgeBg: "bg-error text-on-primary font-extrabold animate-pulse",
+    bannerBadgeText: "ALERTA CRÍTICA",
+    bannerTitle: "Condición del Agua: Peligro / Vertimientos",
+    bannerDesc: "Valores críticos detectados. Posible vertimiento contaminante o escorrentía ácida. Pesca desaconsejada.",
+    bannerIcon: "gpp_bad"
+  },
+  "Regular": {
+    bg: "bg-warning/15 text-[#b78103] border-warning/35 dark:bg-[#b78103]/20 dark:text-warning",
+    icon: "info",
+    title: "Condiciones Regulares / Intermedias",
+    desc: "El pH y la conductividad están dentro de límites tolerables, típicos del período de transición de mareas en la Ciénaga. El agua está algo cálida, por lo que los peces podrían estar buscando corrientes rápidas o refugios con sombra en los manglares.",
+    bannerBg: "from-warning/10 to-transparent bg-gradient-to-b border-warning/30",
+    bannerBadgeBg: "bg-warning/20 text-[#b78103] dark:bg-[#b78103]/40 dark:text-warning",
+    bannerBadgeText: "ESTADO REGULAR",
+    bannerTitle: "Condición del Agua: Estable pero Intermedia",
+    bannerDesc: "Condiciones estables de transición de marea. Se recomienda buscar corrientes y sombra de manglares.",
+    bannerIcon: "info"
+  }
+};
+
+// Secuencias de escenarios de simulación
+const simulationScenarios = [
+  {
+    ph: 7.38,
+    conductivity: 210,
+    temperature: 27.5,
+    status: "Óptimo",
+    description: "Bueno: Agua pura, pH neutro ideal y temperatura templada para pesca."
+  },
+  {
+    ph: 5.42,
+    conductivity: 480,
+    temperature: 32.1,
+    status: "Crítico",
+    description: "Malo: Escorrentía ácida o vertimiento contaminante de alta salinidad y calor térmico."
+  },
+  {
+    ph: 6.65,
+    conductivity: 315,
+    temperature: 29.2,
+    status: "Regular",
+    description: "Normal: Valores tolerables de transición, agua dulce ligeramente cálida."
+  }
+];
+
 export default function Dashboard() {
   const navigate = useNavigate();
 
@@ -17,6 +82,11 @@ export default function Dashboard() {
   const [latestSavedReading, setLatestSavedReading] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
+
+  // Estados del Cargador de 10 Segundos
+  const [progressPercent, setProgressPercent] = useState(0);
+  const [progressLog, setProgressLog] = useState('');
+  const [scenarioIndex, setScenarioIndex] = useState(0); // Ciclador: 0=Bueno, 1=Malo, 2=Normal
 
   // Toast notification
   const [toastMessage, setToastMessage] = useState(null);
@@ -47,7 +117,7 @@ export default function Dashboard() {
       setConnectionStatus('connecting');
       connectionTimeout = setTimeout(() => {
         setConnectionStatus('connected');
-        // Valores iniciales realistas del Río Gaira
+        // Valores iniciales realistas de la Ciénaga
         setCurrentPH(7.35);
         setCurrentCond(210);
         setCurrentTemp(27.8);
@@ -59,15 +129,15 @@ export default function Dashboard() {
     return () => clearTimeout(connectionTimeout);
   }, [isMeterOn]);
 
-  // Efecto para hacer fluctuar los valores levemente mientras esté encendido y conectado
+  // Efecto para hacer fluctuar los valores levemente mientras esté encendido y conectado (y no guardando)
   useEffect(() => {
     let fluctuationInterval;
-    if (isMeterOn && connectionStatus === 'connected') {
+    if (isMeterOn && connectionStatus === 'connected' && !isSaving) {
       fluctuationInterval = setInterval(() => {
         setCurrentPH(prev => {
           const delta = (Math.random() - 0.5) * 0.15;
           const next = prev + delta;
-          return Math.min(Math.max(next, 6.8), 8.2); // Rango seguro para el río
+          return Math.min(Math.max(next, 6.8), 8.2);
         });
         setCurrentCond(prev => {
           const delta = Math.round((Math.random() - 0.5) * 6);
@@ -83,7 +153,7 @@ export default function Dashboard() {
     }
 
     return () => clearInterval(fluctuationInterval);
-  }, [isMeterOn, connectionStatus]);
+  }, [isMeterOn, connectionStatus, isSaving]);
 
   // Mostrar toast sutil
   const showToast = (msg) => {
@@ -93,36 +163,95 @@ export default function Dashboard() {
     }, 3500);
   };
 
-  // Guardar medición en Firebase
-  const handleSaveToFirebase = async () => {
-    if (!isMeterOn || connectionStatus !== 'connected') return;
+  // Guardar medición en Firebase (Con un temporizador exacto de 10 segundos y logs progresivos)
+  const handleSaveToFirebase = () => {
+    if (!isMeterOn || connectionStatus !== 'connected') {
+      showToast("⚠️ Enciende el medidor para tomar la lectura.");
+      return;
+    }
 
     setIsSaving(true);
+    setProgressPercent(0);
+    setProgressLog("🔍 Inicializando secuencia de lectura en CIENAGA-01...");
+
+    const progressSteps = [
+      { pct: 10, log: "📡 Localizando dispositivo medidor vía enlace de radio LoRa..." },
+      { pct: 20, log: "📶 Estableciendo handshake seguro en frecuencia de 915 MHz..." },
+      { pct: 30, log: "🔋 Diagnóstico de hardware: Batería 88% • Señal fuerte (RSSI: -72 dBm)" },
+      { pct: 40, log: "🧪 Limpiando electrodo de vidrio y estabilizando lectura de pH..." },
+      { pct: 50, log: "⚡ Midiendo conductancia eléctrica de fluidos disueltos en Ciénaga..." },
+      { pct: 60, log: "🌡️ Calibrando sensor térmico y compensando temperatura activa..." },
+      { pct: 70, log: "📦 Compilando telemetría final: estampando firma digital..." },
+      { pct: 80, log: "☁️ Enviando paquete de datos cifrados a la colección de Firebase Firestore..." },
+      { pct: 90, log: "💾 Almacenando réplica local persistente para uso sin conexión..." },
+      { pct: 100, log: "✅ ¡Sincronización de base de datos exitosa!" }
+    ];
+
+    let currentStepIndex = 0;
+    const interval = setInterval(() => {
+      if (currentStepIndex < progressSteps.length) {
+        const step = progressSteps[currentStepIndex];
+        setProgressPercent(step.pct);
+        setProgressLog(step.log);
+        currentStepIndex++;
+      } else {
+        clearInterval(interval);
+        
+        // Ejecutar el guardado real con el escenario correspondiente una vez pasados los 10 segundos
+        finalizeSave();
+      }
+    }, 1000); // 10 pasos de 1 segundo cada uno = 10 segundos de carga exacta
+  };
+
+  // Guardado real de datos tras los 10 segundos
+  const finalizeSave = async () => {
+    // Tomar el escenario secuencial actual
+    const targetScenario = simulationScenarios[scenarioIndex];
+
     try {
+      // 1. Forzar los gauges visuales en vivo a reflejar exactamente los valores que guardamos
+      setCurrentPH(targetScenario.ph);
+      setCurrentCond(targetScenario.conductivity);
+      setCurrentTemp(targetScenario.temperature);
+
+      // 2. Guardar en el servicio simulador de Firebase
       const saved = await firebaseService.saveReading({
-        ph: currentPH,
-        conductivity: currentCond,
-        temperature: currentTemp
+        ph: targetScenario.ph,
+        conductivity: targetScenario.conductivity,
+        temperature: targetScenario.temperature
       });
-      
-      // Actualizar estados
+
+      // Sobrescribir el estado para inyectar el status exacto del escenario
+      saved.status = targetScenario.status;
+
+      // 3. Actualizar estados locales del Dashboard de inmediato
       setReadings(prev => [saved, ...prev]);
       setLatestSavedReading(saved);
-      showToast("💾 ¡Medición sincronizada exitosamente con Firebase!");
+      
+      // 4. Mostrar alerta Toast Premium
+      showToast(`💾 ¡Medición ${targetScenario.status} guardada con éxito en Firebase Firestore!`);
+
+      // 5. Ciclar el índice para el siguiente clic (Bueno -> Malo -> Normal -> Bueno)
+      setScenarioIndex(prev => (prev + 1) % simulationScenarios.length);
     } catch (err) {
       console.error(err);
-      showToast("❌ Error al conectar con el servidor de base de datos.");
+      showToast("❌ Error al guardar datos en la base de datos.");
     } finally {
       setIsSaving(false);
+      setProgressPercent(0);
+      setProgressLog('');
     }
   };
 
   // Transferir datos al chatbot
   const handleTransferToChat = (reading) => {
     if (!reading) return;
-    // Navegar a /chat pasando la lectura en el State de React Router
     navigate('/chat', { state: { reading } });
   };
+
+  // Buscar configuración del estado actual (por defecto Óptimo si no hay lecturas)
+  const activeStatus = latestSavedReading ? latestSavedReading.status : "Óptimo";
+  const activeConfig = statusConfig[activeStatus] || statusConfig["Óptimo"];
 
   return (
     <div className="bg-background text-on-background min-h-screen font-body-lg text-body-lg antialiased pb-24 md:pb-8">
@@ -132,6 +261,49 @@ export default function Dashboard() {
         <div className="fixed top-20 right-4 z-50 bg-inverse-surface text-inverse-on-surface px-6 py-3.5 rounded-xl shadow-lg border border-outline-variant/30 flex items-center gap-3 animate-bounce">
           <span className="material-symbols-outlined text-primary text-[20px]">cloud_sync</span>
           <span className="text-body-sm font-semibold">{toastMessage}</span>
+        </div>
+      )}
+
+      {/* MODAL OVERLAY DE CARGA - 10 SEGUNDOS DE SINCRONIZACIÓN REALISTA */}
+      {isSaving && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-md flex items-center justify-center p-6">
+          <div className="glass-card max-w-lg w-full rounded-[2rem] p-8 border border-outline-variant/20 shadow-2xl space-y-6 text-center">
+            
+            <div className="relative w-24 h-24 mx-auto flex items-center justify-center">
+              {/* Círculo animado */}
+              <div className="absolute inset-0 rounded-full border-4 border-primary/20 border-t-primary animate-spin"></div>
+              <span className="material-symbols-outlined text-primary text-[42px] animate-pulse">cloud_sync</span>
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-headline-lg font-bold text-on-surface">Hardware Link Activo</h3>
+              <p className="text-body-sm text-on-surface-variant">Sincronizando telemetría física con base de datos Firebase Firestore...</p>
+            </div>
+
+            {/* Barra de Progreso */}
+            <div className="space-y-2">
+              <div className="w-full bg-surface-container-high rounded-full h-3 overflow-hidden border border-outline-variant/10">
+                <div 
+                  className="bg-gradient-to-r from-primary to-secondary h-full transition-all duration-300 rounded-full"
+                  style={{ width: `${progressPercent}%` }}
+                ></div>
+              </div>
+              <div className="flex justify-between text-[11px] font-bold text-neutral">
+                <span>PORCENTAJE: {progressPercent}%</span>
+                <span>TIEMPO RESTANTE: {10 - Math.round(progressPercent / 10)}s</span>
+              </div>
+            </div>
+
+            {/* Log de Consola de Hardware */}
+            <div className="bg-surface-container-lowest/80 border border-outline-variant/15 p-4 rounded-xl text-left font-mono text-[12px] text-primary h-16 flex items-center overflow-hidden">
+              <span className="animate-pulse mr-1.5">▶</span> {progressLog}
+            </div>
+
+            <div className="text-[10px] text-neutral">
+              No cierre la ventana. Adquisición de parámetros de Ciénaga en proceso físico.
+            </div>
+
+          </div>
         </div>
       )}
 
@@ -194,6 +366,25 @@ export default function Dashboard() {
                 {isMeterOn ? 'Apagar' : 'Encender'}
               </button>
             </div>
+          </div>
+        </div>
+
+        {/* TARJETA DINÁMICA DE ESTADO ACTUAL - REACTIVA AL GUARDAR */}
+        <div className={`glass-card rounded-[2rem] p-8 md:p-10 relative overflow-hidden transition-all duration-500 border ${activeConfig.bannerBg}`}>
+          <div className="absolute top-0 right-0 p-6 opacity-10 pointer-events-none">
+            <span className="material-symbols-outlined text-[120px] text-primary">{activeConfig.bannerIcon}</span>
+          </div>
+          <div className="relative z-10">
+            <div className={`inline-flex items-center gap-2 px-4.5 py-1.5 rounded-full mb-6 font-bold text-label-caps tracking-wide ${activeConfig.bannerBadgeBg}`}>
+              <span className="w-2.5 h-2.5 rounded-full bg-current animate-pulse"></span>
+              <span>{activeConfig.bannerBadgeText}</span>
+            </div>
+            <h3 className="text-display-lg font-bold text-on-surface mb-3 max-w-2xl leading-tight">
+              {activeConfig.bannerTitle}
+            </h3>
+            <p className="text-headline-md text-on-surface-variant max-w-2xl font-medium">
+              {activeConfig.bannerDesc}
+            </p>
           </div>
         </div>
 
@@ -274,12 +465,16 @@ export default function Dashboard() {
                       <span className="text-body-sm font-bold text-on-surface-variant">Potencial de Hidrógeno</span>
                       <span className="material-symbols-outlined text-primary group-hover:scale-110 transition-transform">science</span>
                     </div>
-                    <div className="text-display-lg text-on-surface font-extrabold my-2 animate-pulse">
+                    <div className="text-display-lg text-on-surface font-extrabold my-2">
                       {currentPH.toFixed(2)}
                     </div>
                     <div className="flex justify-between items-center mt-3">
                       <span className="text-body-sm text-on-surface-variant">pH actual</span>
-                      <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-success/15 text-success">IDEAL</span>
+                      <span className={`text-[11px] font-bold px-2 py-0.5 rounded ${
+                        (currentPH >= 7.0 && currentPH <= 7.8) ? 'bg-success/15 text-success' : 'bg-error/15 text-error animate-pulse'
+                      }`}>
+                        {(currentPH >= 7.0 && currentPH <= 7.8) ? 'IDEAL' : 'CRÍTICO'}
+                      </span>
                     </div>
                   </div>
 
@@ -290,12 +485,16 @@ export default function Dashboard() {
                       <span className="text-body-sm font-bold text-on-surface-variant">Conductividad</span>
                       <span className="material-symbols-outlined text-secondary group-hover:scale-110 transition-transform">electric_bolt</span>
                     </div>
-                    <div className="text-display-lg text-on-surface font-extrabold my-2 animate-pulse">
+                    <div className="text-display-lg text-on-surface font-extrabold my-2">
                       {currentCond} <span className="text-body-sm font-bold text-neutral">µS/cm</span>
                     </div>
                     <div className="flex justify-between items-center mt-3">
-                      <span className="text-body-sm text-on-surface-variant">Pureza del agua</span>
-                      <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-secondary/15 text-on-secondary-container">BAJA SALINIDAD</span>
+                      <span className="text-body-sm text-on-surface-variant">Sales/Minerales</span>
+                      <span className={`text-[11px] font-bold px-2 py-0.5 rounded ${
+                        currentCond < 250 ? 'bg-success/15 text-success' : currentCond < 350 ? 'bg-warning/15 text-warning' : 'bg-error/15 text-error animate-pulse'
+                      }`}>
+                        {currentCond < 250 ? 'EXCELENTE' : currentCond < 350 ? 'MODERADO' : 'CRÍTICO'}
+                      </span>
                     </div>
                   </div>
 
@@ -306,12 +505,16 @@ export default function Dashboard() {
                       <span className="text-body-sm font-bold text-on-surface-variant">Temperatura</span>
                       <span className="material-symbols-outlined text-tertiary group-hover:scale-110 transition-transform">device_thermostat</span>
                     </div>
-                    <div className="text-display-lg text-on-surface font-extrabold my-2 animate-pulse">
+                    <div className="text-display-lg text-on-surface font-extrabold my-2">
                       {currentTemp.toFixed(1)} <span className="text-body-sm font-bold text-neutral">°C</span>
                     </div>
                     <div className="flex justify-between items-center mt-3">
-                      <span className="text-body-sm text-on-surface-variant">Cálida</span>
-                      <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-tertiary-fixed-dim/40 text-on-tertiary-fixed">ESTABLE</span>
+                      <span className="text-body-sm text-on-surface-variant">Calidez Térmica</span>
+                      <span className={`text-[11px] font-bold px-2 py-0.5 rounded ${
+                        currentTemp < 29 ? 'bg-success/15 text-success' : currentTemp < 31 ? 'bg-warning/15 text-[#b78103]' : 'bg-error/15 text-error animate-pulse'
+                      }`}>
+                        {currentTemp < 29 ? 'ESTABLE' : currentTemp < 31 ? 'CÁLIDA' : 'CRÍTICA'}
+                      </span>
                     </div>
                   </div>
 
@@ -320,27 +523,21 @@ export default function Dashboard() {
 
               {/* Botón de Sincronización en Firebase */}
               <div className="mt-4 flex flex-col sm:flex-row justify-between items-center gap-3">
-                <p className="text-[13px] text-on-surface-variant text-center sm:text-left">
-                  {connectionStatus === 'connected' 
-                    ? "✓ Los valores se actualizan dinámicamente. Presiona el botón para sincronizar con Firebase." 
-                    : "⚠️ Enciende y conecta el dispositivo para habilitar la base de datos."}
-                </p>
+                <div className="text-[13px] text-on-surface-variant flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[18px] text-primary">tips_and_updates</span>
+                  <span>
+                    {connectionStatus === 'connected' 
+                      ? `Próximo guardado: Escenario ${simulationScenarios[scenarioIndex].status} (Haz clic para alternar)` 
+                      : "Enciende y conecta el dispositivo para habilitar la sincronización."}
+                  </span>
+                </div>
                 <button
                   onClick={handleSaveToFirebase}
                   disabled={isSaving || connectionStatus !== 'connected'}
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 bg-gradient-to-r from-primary to-primary-container text-on-primary px-6 py-3 rounded-xl font-bold hover:shadow-lg hover:shadow-primary/20 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:pointer-events-none"
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 bg-gradient-to-r from-primary to-primary-container text-on-primary px-6 py-3.5 rounded-xl font-bold hover:shadow-lg hover:shadow-primary/20 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:pointer-events-none"
                 >
-                  {isSaving ? (
-                    <>
-                      <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                      Sincronizando con Firebase...
-                    </>
-                  ) : (
-                    <>
-                      <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>cloud_upload</span>
-                      Tomar y Guardar Lectura (Firebase)
-                    </>
-                  )}
+                  <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>cloud_upload</span>
+                  Tomar y Guardar Lectura (Firebase)
                 </button>
               </div>
 
@@ -350,13 +547,13 @@ export default function Dashboard() {
           {/* Lado Derecho: Aluna IA Quick Insight (Pasar datos al Chatbot) */}
           <div className="lg:col-span-4 flex flex-col justify-between glass-card rounded-[2rem] p-6 md:p-8 bg-gradient-to-br from-primary-container/10 via-secondary-container/5 to-transparent border border-outline-variant/20 shadow-md">
             
-            <div>
-              <div className="flex items-center gap-2 bg-primary/10 text-primary px-3.5 py-1.5 rounded-full w-max mb-6">
+            <div className="space-y-6">
+              <div className="flex items-center gap-2 bg-primary/10 text-primary px-3.5 py-1.5 rounded-full w-max">
                 <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>assistant</span>
-                <span className="text-[11px] font-bold uppercase tracking-wider">Asistente del Pescador</span>
+                <span className="text-[11px] font-bold uppercase tracking-wider">Análisis Inteligente</span>
               </div>
 
-              <h3 className="text-headline-lg font-bold text-on-surface mb-3 leading-tight">Análisis Inteligente</h3>
+              <h3 className="text-headline-lg font-bold text-on-surface leading-tight">Aluna IA Insight</h3>
               
               {latestSavedReading ? (
                 <div className="space-y-4">
@@ -365,7 +562,7 @@ export default function Dashboard() {
                   </p>
                   
                   {/* Tarjeta de Resumen Compacta */}
-                  <div className="bg-surface-container/60 p-4 rounded-xl border border-outline-variant/10 space-y-2">
+                  <div className="bg-surface-container/60 p-4.5 rounded-xl border border-outline-variant/10 space-y-2">
                     <div className="flex justify-between items-center text-body-sm">
                       <span className="font-semibold text-on-surface-variant flex items-center gap-1">
                         <span className="material-symbols-outlined text-[16px] text-primary">science</span> pH
@@ -385,25 +582,27 @@ export default function Dashboard() {
                       <span className="font-bold text-on-surface">{latestSavedReading.temperature} °C</span>
                     </div>
                     <div className="pt-2 border-t border-outline-variant/10 text-[11px] text-neutral text-right">
-                      Guardado: {new Date(latestSavedReading.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                      Sincronizado: {new Date(latestSavedReading.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                     </div>
                   </div>
 
-                  {/* Diagnóstico rápido */}
-                  <div className="bg-[#e6f4ea] text-[#137333] p-4 rounded-xl text-body-sm flex gap-3 items-start border border-[#c3e6cb]">
-                    <span className="material-symbols-outlined text-[20px] shrink-0" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                  {/* Diagnóstico rápido reactivo */}
+                  <div className={`p-4 rounded-xl text-body-sm flex gap-3 items-start border transition-colors duration-300 ${activeConfig.bg}`}>
+                    <span className="material-symbols-outlined text-[22px] shrink-0" style={{ fontVariationSettings: "'FILL' 1" }}>
+                      {activeConfig.icon}
+                    </span>
                     <div>
-                      <h4 className="font-bold">Río Saludable e Ideal</h4>
-                      <p className="text-xs mt-1 text-[#137333]/90">
-                        El pH neutro y la baja conductividad descartan vertimientos industriales nocivos. Las especies locales como la Lisa se mantendrán activas.
+                      <h4 className="font-bold text-[14px]">{activeConfig.title}</h4>
+                      <p className="text-xs mt-1 leading-relaxed opacity-95">
+                        {activeConfig.desc}
                       </p>
                     </div>
                   </div>
                 </div>
               ) : (
-                <div className="py-8 text-center text-neutral text-body-sm space-y-2">
-                  <span className="material-symbols-outlined text-[48px] text-outline/30">database</span>
-                  <p>Aún no se han guardado lecturas en Firebase en esta sesión.</p>
+                <div className="py-12 text-center text-neutral text-body-sm space-y-3">
+                  <span className="material-symbols-outlined text-[48px] text-outline/30 animate-pulse">cloud_off</span>
+                  <p>Inicia el medidor y presiona "Tomar y Guardar Lectura" para registrar datos históricos.</p>
                 </div>
               )}
             </div>
@@ -483,9 +682,19 @@ export default function Dashboard() {
                       </td>
                       <td className="py-4 px-4">
                         <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
-                          reading.status === 'Óptimo' ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'
+                          reading.status === 'Óptimo' 
+                            ? 'bg-success/10 text-success' 
+                            : reading.status === 'Crítico' 
+                            ? 'bg-error/10 text-error animate-pulse' 
+                            : 'bg-warning/10 text-[#b78103]'
                         }`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${reading.status === 'Óptimo' ? 'bg-success' : 'bg-warning'}`}></span>
+                          <span className={`w-1.5 h-1.5 rounded-full ${
+                            reading.status === 'Óptimo' 
+                              ? 'bg-success' 
+                              : reading.status === 'Crítico' 
+                              ? 'bg-error' 
+                              : 'bg-warning'
+                          }`}></span>
                           {reading.status}
                         </span>
                       </td>
@@ -510,7 +719,7 @@ export default function Dashboard() {
       </main>
       
       {/* BottomNavBar (Móvil Únicamente) */}
-      <nav className="md:hidden fixed bottom-0 left-0 w-full z-40 flex justify-around items-center h-16 bg-surface/85 backdrop-blur-xl border-t border-outline-variant/15 shadow-lg pb-safe">
+      <nav className="md:hidden fixed bottom-0 left-0 w-full z-45 flex justify-around items-center h-16 bg-surface/85 backdrop-blur-xl border-t border-outline-variant/15 shadow-lg pb-safe">
         <Link to="/dashboard" className="flex flex-col items-center justify-center active:scale-90 transition-transform duration-150 text-primary font-bold">
           <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>waves</span>
           <span className="text-[10px] uppercase font-bold mt-1">Estación</span>
